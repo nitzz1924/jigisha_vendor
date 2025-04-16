@@ -1,0 +1,152 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Nortification;
+use Illuminate\Http\Request;
+use Session;
+use Auth,Validator,Hash,Http;
+use App\Models\RegisterUser;
+use Exception;
+use App\Models\Master;
+use App\Models\PropertyListing;
+class UserViews extends Controller
+{
+    public function dashboard()
+    {
+        return view('UserPanelPages.dashboard');
+    }
+
+    public function logoutuserpanel()
+    {
+        Auth::guard('customer')->logout();
+        return redirect()->route('user.userloginpage');
+    }
+
+    public function myprofile()
+    {
+        $userdata = Auth::guard('customer')->user();
+        return view('UserPanelPages.myprofile', compact('userdata'));
+    }
+
+    public function updateuserprofile(Request $request)
+    {
+        // dd($request->all());
+        try {
+            $user = Auth::guard('customer')->user();
+            $filenameprofileimage = "";
+            $thumbnailFilename = null;
+
+            if ($request->hasFile('myprofileimage')) {
+                $request->validate([
+                    'myprofileimage' => 'image|mimes:jpeg,png,jpg|max:2048',
+                ]);
+                $profileimage = $request->file('myprofileimage');
+                $filenameprofileimage = time() . '_' . $profileimage->getClientOriginalName();
+                $profileimage->move(public_path('assets/images/Users'), $filenameprofileimage);
+            }
+
+            if ($request->hasFile('company_document')) {
+                $request->validate([
+                    'company_document' => 'required|mimes:jpeg,pdf,jpg',
+                ]);
+
+                $file = $request->file('company_document');
+                $thumbnailFilename = time() . '_' . $file->getClientOriginalName();
+                $file->move(public_path('assets/images/Users'), $thumbnailFilename);
+            }
+
+            $user->update([
+                'name' => $request->name,
+                'email' => $request->email,
+                'mobile' => $request->mobile,
+                'company_name' => $request->companyname,
+                'profile_photo_path' => $filenameprofileimage == null ? $user->profile_photo_path : $filenameprofileimage,
+                'company_document' => $thumbnailFilename == null ? $user->company_document : $thumbnailFilename,
+            ]);
+
+            return back()->with('success', "Profile Updated..!!!");
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function userloginpage(){
+        return view('auth.UserPanel.login');
+    }
+    public function userregistration(){
+        return view('auth.UserPanel.registration');
+    }
+
+    public function registeruser(Request $request)
+    {
+        // dd($request->all());
+        try {
+            // Validate all input fields including reCAPTCHA
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|email|unique:register_users',
+                'mobile' => 'required|unique:register_users|digits:10',
+                'fullname' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return back()->withErrors($validator)->withInput();
+            }
+        
+            // Create user record
+            RegisterUser::create([
+                'name' => $request->fullname,
+                'mobile' => $request->mobile,
+                'email' => $request->email,
+                'company_name' => $request->company_name,
+                'password' => Hash::make($request->password),
+                'profile_photo_path' => '/defaultuser.png',
+            ]);
+
+            return back()->with('success', 'You have been registered successfully!');
+
+        } catch (Exception $e) {
+            return back()->with('error', 'An error occurred: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    public function loginuser(Request $rq)
+    {
+        try {
+            $user = RegisterUser::where('email', $rq->email)->first();
+            if ($user) {
+                if (Hash::check($rq->password, $user->password)) {
+                    Auth::guard('customer')->login($user);
+                    if (Auth::guard('customer')->check()) {
+                        $user->verification_status = 1;
+                        $user->save();
+                        return redirect()->route('user.dashboard');
+                    } else {
+                        return back()->with('error', "Invalid Credentials..!!!");
+                    }
+                } else {
+                    return back()->with('error', "Invalid Password..!!!");
+                }
+            } else {
+                return back()->with('error', "Invalid Email..!!!");
+            }
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function updatepassword(Request $request){
+        try{
+            $user = Auth::guard('customer')->user();
+            if (Hash::check($request->oldpassword, $user->password)) {
+                $udpatedpassword = $user->password = Hash::make($request->newpassword);
+            }
+            $user->update([
+                'password' => $udpatedpassword ?? $user->password,
+            ]);
+            return back()->with('success', "Password Updated..!!!");
+        }catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+}
