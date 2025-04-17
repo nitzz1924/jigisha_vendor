@@ -53,6 +53,9 @@ Route::get('user/login', [UserViews::class, 'userloginpage'])->name('user.userlo
 Route::get('user/registration', [UserViews::class, 'userregistration'])->name('user.userregistration');
 Route::post('register-user', [UserViews::class, 'registeruser'])->name('user.registeruser');
 Route::post('loginuser', [UserViews::class, 'loginuser'])->name('user.loginuser');
+Route::get('user/registration', [UserViews::class, 'userregistration'])->name('user.userregistration');
+Route::get('user/vendor-registeration', [UserViews::class, 'vendorregisteration'])->name('user.vendorregisteration');
+Route::post('user/vendor-insertion', [UserViews::class, 'vendorinsertion'])->name('user.vendorinsertion');
 
 
 

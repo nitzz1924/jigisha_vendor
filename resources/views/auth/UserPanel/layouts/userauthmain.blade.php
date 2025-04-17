@@ -10,7 +10,8 @@
      <link rel="shortcut icon" type="image/png" href="{{ asset('assets/images/faviomega.png') }}" />
 
     <!-- Core Css -->
-    <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}" />
+        <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}" />
+
     @stack('title')
 </head>
 
@@ -26,6 +27,9 @@
     <script src="{{ asset('assets/js/theme.js') }}"></script>
     <script src="{{ asset('assets/js/app.min.js') }}"></script>
     <script src="{{ asset('assets/js/iconify-icon.min.js') }}"></script>
-
+    <script src="{{ asset('assets/js/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ asset('assets/js/jquery.steps.min.js') }}"></script>
+    <script src="{{ asset('assets/js/jquery.validate.min.js') }}"></script>
+    <script src="{{ asset('assets/js/form-wizard.js') }}"></script>
 </body>
 </html>

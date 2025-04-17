@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Nortification;
+use App\Models\Vendor;
 use Illuminate\Http\Request;
 use Session;
-use Auth,Validator,Hash,Http;
+use Auth, Validator, Hash, Http;
 use App\Models\RegisterUser;
 use Exception;
+use Log;
 use App\Models\Master;
 use App\Models\PropertyListing;
 class UserViews extends Controller
@@ -71,10 +73,13 @@ class UserViews extends Controller
         }
     }
 
-    public function userloginpage(){
+    public function userloginpage()
+    {
         return view('auth.UserPanel.login');
     }
-    public function userregistration(){
+    public function userregistration()
+    {
+       
         return view('auth.UserPanel.registration');
     }
 
@@ -92,7 +97,7 @@ class UserViews extends Controller
             if ($validator->fails()) {
                 return back()->withErrors($validator)->withInput();
             }
-        
+
             // Create user record
             RegisterUser::create([
                 'name' => $request->fullname,
@@ -103,7 +108,8 @@ class UserViews extends Controller
                 'profile_photo_path' => '/defaultuser.png',
             ]);
 
-            return back()->with('success', 'You have been registered successfully!');
+            $user = RegisterUser::where('email', $request->email)->first();
+            return redirect()->route('user.vendorregisteration')->with('userid', $user->id);
 
         } catch (Exception $e) {
             return back()->with('error', 'An error occurred: ' . $e->getMessage())->withInput();
@@ -135,8 +141,9 @@ class UserViews extends Controller
         }
     }
 
-    public function updatepassword(Request $request){
-        try{
+    public function updatepassword(Request $request)
+    {
+        try {
             $user = Auth::guard('customer')->user();
             if (Hash::check($request->oldpassword, $user->password)) {
                 $udpatedpassword = $user->password = Hash::make($request->newpassword);
@@ -145,8 +152,68 @@ class UserViews extends Controller
                 'password' => $udpatedpassword ?? $user->password,
             ]);
             return back()->with('success', "Password Updated..!!!");
-        }catch (Exception $e) {
+        } catch (Exception $e) {
             return back()->with('error', $e->getMessage());
         }
+    }
+    public function vendorregisteration()
+    {
+        $userid = session('userid');
+        return view('auth.UserPanel.vendorRegister', compact('userid'));
+    }
+
+    public function vendorinsertion(Request $request)
+    {
+        try {
+            $fields = $request->all(); // Includes both text + file inputs
+
+            // List all file input names
+            $fileInputs = [
+                'pan_file',
+                'gst_file',
+                'incorporation_file',
+                'establishment_file',
+                'trademark_file',
+                'ca_certificate_file',
+                'msme_certificate_file',
+                'product_spec_file',
+                'product_certificate_file',
+                'product_test_file',
+                'catalog_file',
+                'approval_certificate_file',
+                'epfo_file',
+                'iso_file',
+                'product_image_file',
+                'list_plant_file',
+                'registered_address_file',
+                'head_office_image',
+                'list_product_1',
+                'annual_production_1',
+                'plan_image_1'
+            ];
+
+            // Loop through file inputs and store them
+            foreach ($fileInputs as $fileField) {
+                if ($request->hasFile($fileField)) {
+                    $file = $request->file($fileField);
+                    $filename = time() . '_' . $file->getClientOriginalName();
+                    $file->move(public_path('assets/images/Vendors'), $filename);
+                    $fields[$fileField] = $filename;
+                }
+            }
+            // Convert any array values to comma-separated strings
+            foreach ($fields as $key => $value) {
+                if (is_array($value)) {
+                    $fields[$key] = json_encode($value);
+                }
+            }
+            Log::info($fields);
+            $data = Vendor::create($fields);
+
+            return response()->json(['data' => $data, 'message' => 'Listing inserted successfully!']);
+        } catch (Exception $e) {
+            return response()->json(['error' => true, 'message' => $e->getMessage()]);
+        }
+
     }
 }
